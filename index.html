@@ -64,7 +64,8 @@ input.field{font-size:18px}.cyclebar{display:flex;gap:7px;margin:14px 0 4px}.cy{
 
 <div id="searchView" class="view">
  <div class="card">
-  <div class="searchCycle"><span>Searching <b id="searchCycleLabel">Cycle 1</b></span><button class="navBtn" style="padding:8px 12px" onclick="showView('rebirth')">CHANGE</button></div>
+  <div class="searchCycle"><span>Searching <b id="searchCycleLabel">Cycle 1</b></span><button class="navBtn" style="padding:8px 12px" onclick="showView('rebirth')">CHANGE CYCLE</button></div>
+  <div style="margin-bottom:12px"><label for="searchRebirthSelect">Current rebirth for this search</label><select id="searchRebirthSelect" class="field" onchange="setSearchRebirth(this.value)"></select></div>
   <div><label for="search">Find a droid</label><input id="search" class="field" list="droids" placeholder="e.g. R7, Mecha-Droid, BB9…" autocomplete="off"><datalist id="droids"></datalist></div>
   <div style="margin-top:12px"><label for="owned">Variant you have</label><select id="owned" class="field"></select></div>
  </div>
@@ -78,7 +79,9 @@ input.field{font-size:18px}.cyclebar{display:flex;gap:7px;margin:14px 0 4px}.cy{
 const TIER=["DEFAULT","GOLD","DIAMOND","RAINBOW","BESKAR","GALACTIC","STELLAR","KYBER"];
 const COLORS={1:"#ff9d00",2:"#21e3e5",3:"#ff2aa4",4:"#7628ff",5:"#7ee43b"};
 let cycle=+(localStorage.cycle||1), current=+(localStorage.rb||1);
+let searchCurrent=+(localStorage.searchRb||current||1);
 if(current<1) current=1;
+if(searchCurrent<1) searchCurrent=1;
 const $=s=>document.querySelector(s), esc=s=>s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 function rows(){return REBIRTH_DATA[cycle]}
 function allNames(){return [...new Set(rows().flatMap(r=>r.reqs.map(x=>x.name)))].sort((a,b)=>a.localeCompare(b))}
@@ -101,6 +104,9 @@ function moveRebirth(delta){
 function jumpRebirth(value){
  current=Math.max(1,Math.min(40,+value)); localStorage.rb=current; renderRebirth(); render();
 }
+function setSearchRebirth(value){
+ searchCurrent=Math.max(1,Math.min(40,+value)); localStorage.searchRb=searchCurrent; render();
+}
 function reqRows(rb,withActions){
  const r=rows().find(x=>x.rb===rb); if(!r)return "";
  return r.reqs.map(x=>{
@@ -112,6 +118,7 @@ function renderRebirth(){
  document.documentElement.style.setProperty("--accent",COLORS[cycle]);
  $("#cycles").innerHTML=[1,2,3,4,5].map(n=>`<button class="cy ${n===cycle?'on':''}" onclick="setCycle(${n})">${n}</button>`).join("");
  $("#searchCycleLabel").textContent=`Cycle ${cycle}`;
+ $("#searchRebirthSelect").innerHTML=Array.from({length:40},(_,i)=>`<option value="${i+1}" ${i+1===searchCurrent?'selected':''}>Rebirth ${i+1}</option>`).join("");
  $("#rebirthSelect").innerHTML=Array.from({length:40},(_,i)=>`<option value="${i+1}" ${i+1===current?'selected':''}>Rebirth ${i+1}</option>`).join("");
  $("#currentPanel").innerHTML=`<div class="sectionTitle"><span>CURRENT · REBIRTH ${current}</span><span class="mini">Cycle ${cycle}</span></div><div class="mini" style="margin-bottom:8px">What you need now — and what to do afterwards</div>${reqRows(current,true)}`;
  if(current<40){
@@ -129,10 +136,10 @@ function render(){
  let names=allNames(),exact=names.find(n=>n.toUpperCase()===q),matches=names.filter(n=>n.toUpperCase().includes(q));
  if(!exact&&matches.length===1)exact=matches[0];
  if(!exact){$("#result").innerHTML=`<div class="card"><div class="hint">${matches.length?`Matches: <b>${matches.slice(0,8).map(esc).join(", ")}</b>`:"No droid found in this cycle."}</div></div>`;return}
- const req=requirements(exact),future=req.filter(x=>x.rb>current),next=future[0],last=future[future.length-1];
+ const req=requirements(exact),future=req.filter(x=>x.rb>searchCurrent),next=future[0],last=future[future.length-1];
  const owned=$("#owned").value,ownedRank=TIER.indexOf(owned);
- let verdict=!future.length?{cls:"sell",text:"✓ SELL",sub:"You don't need this droid again in this cycle."}:{cls:"keep",text:"KEEP",sub:`Next needed at Rebirth ${next.rb} — ${next.tier}. Last needed at Rebirth ${last.rb}.`};
- const rowsHtml=req.map(x=>{const passed=x.rb<=current,isNext=next&&x.rb===next.rb,enough=ownedRank>=TIER.indexOf(x.tier);return `<div class="row ${isNext?'next':''}"><div class="rb">RB ${x.rb}</div><div><div class="tier">${x.tier}</div><div class="future">${passed?"passed":isNext?"next requirement":"later this cycle"}</div></div><div class="tag">${passed?"DONE":enough?"HAVE ✓":"UPGRADE"}</div></div>`}).join("");
+ let verdict=!future.length?{cls:"sell",text:"✓ SELL",sub:`After Rebirth ${searchCurrent}, you don't need this droid again in this cycle.`}:{cls:"keep",text:"KEEP",sub:`After Rebirth ${searchCurrent}, next needed at Rebirth ${next.rb} — ${next.tier}. Last needed at Rebirth ${last.rb}.`};
+ const rowsHtml=req.map(x=>{const passed=x.rb<=searchCurrent,isNext=next&&x.rb===next.rb,enough=ownedRank>=TIER.indexOf(x.tier);return `<div class="row ${isNext?'next':''}"><div class="rb">RB ${x.rb}</div><div><div class="tier">${x.tier}</div><div class="future">${passed?"passed":isNext?"next requirement":"later this cycle"}</div></div><div class="tag">${passed?"DONE":enough?"HAVE ✓":"UPGRADE"}</div></div>`}).join("");
  $("#result").innerHTML=`<div class="card"><div class="resultHead"><div class="droid">${esc(exact)}</div><div class="pill">CYCLE ${cycle}</div></div><div class="verdict ${verdict.cls}">${verdict.text}<div style="font-size:12px;font-weight:650;margin-top:4px">${verdict.sub}</div></div>${rowsHtml}</div>`;
 }
 function init(){

@@ -35,8 +35,8 @@ input.field{font-size:18px}.cyclebar{display:flex;gap:7px;margin:14px 0 4px}.cy{
 <div style="margin-top:12px"><label for="search">Find a droid</label><input id="search" class="field" list="droids" placeholder="e.g. R7, Mecha-Droid, BB9…" autocomplete="off"><datalist id="droids"></datalist></div>
 </div>
 
-<div id="result"></div>
 <div class="card" id="currentCard"></div>
+<div id="result"></div>
 
 <div class="small">Fan-made helper. Requirement data can change when Droid Tycoon updates. “Keep” means the same droid is required again later in this cycle, so it may be worth retaining/upgrading. Higher variants satisfy lower requirements. Kyber is included because rebirths 36–40 now use it.</div>
 </div>
@@ -61,9 +61,22 @@ function setCycle(n){cycle=n;localStorage.cycle=n;$("#search").value="";init()}
 $("#rb")?.addEventListener?.("change",()=>{});
 document.addEventListener("change",e=>{if(e.target.id==="rb"){current=+e.target.value;localStorage.rb=current;renderCurrent();render()} if(e.target.id==="owned")render()});
 document.addEventListener("input",e=>{if(e.target.id==="search")render()});
+function keepSellFor(name, afterRb){
+ const later=requirements(name).filter(x=>x.rb>afterRb);
+ if(!later.length) return {keep:false,label:"SELL",detail:"Not needed again this cycle"};
+ const n=later[0];
+ return {keep:true,label:"KEEP",detail:`Next: RB ${n.rb} · ${n.tier}`};
+}
 function renderCurrent(){
- const next=rows().find(r=>r.rb===current+1);
- $("#currentCard").innerHTML=next?`<div class="quickTitle">Next rebirth: ${next.rb}</div>${next.reqs.map(x=>`<div class="req"><span>${esc(x.name)}</span><b>${x.tier}</b></div>`).join("")}`:`<div class="quickTitle">Cycle complete</div><div class="hint">You’re at rebirth 40.</div>`;
+ const here=rows().find(r=>r.rb===current);
+ if(current===0){
+   const first=rows()[0];
+   $("#currentCard").innerHTML=`<div class="quickTitle">Cycle ${cycle} · Before Rebirth 1</div><div class="hint" style="margin-bottom:10px">Your first requirements:</div>`+
+   first.reqs.map(x=>`<div class="req"><span><b>${esc(x.name)}</b><br><span class="future">${x.tier}</span></span><span class="tag">RB 1</span></div>`).join("");
+   return;
+ }
+ $("#currentCard").innerHTML=`<div class="quickTitle">Cycle ${cycle} · Rebirth ${current}</div><div class="hint" style="margin-bottom:8px">Droids required for this rebirth — and what to do with them afterwards.</div>`+
+ here.reqs.map(x=>{const s=keepSellFor(x.name,current);return `<div class="req" style="align-items:center"><span><b>${esc(x.name)}</b><br><span class="future">${x.tier}</span></span><span style="text-align:right"><b style="color:${s.keep?'var(--bad)':'var(--good)'}">${s.label}</b><br><span class="future">${s.detail}</span></span></div>`}).join("");
 }
 function render(){
  const q=$("#search")?.value.trim().toUpperCase()||"";

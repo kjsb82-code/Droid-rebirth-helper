@@ -49,6 +49,10 @@ input.field{font-size:18px}.cyclebar{display:flex;gap:7px;margin:14px 0 4px}.cy{
  <div class="card compact">
   <label>Super Rebirth cycle</label>
   <div class="cyclebar" id="cycles"></div>
+  <div style="margin-top:12px">
+   <label for="rebirthSelect">Current rebirth</label>
+   <select id="rebirthSelect" class="field" onchange="jumpRebirth(this.value)"></select>
+  </div>
  </div>
  <div class="card compact" id="currentPanel"></div>
  <div class="card compact" id="nextPanel"></div>
@@ -94,6 +98,9 @@ function moveRebirth(delta){
  current=Math.max(1,Math.min(40,current+delta)); localStorage.rb=current; renderRebirth(); render();
  window.scrollTo({top:0,behavior:"smooth"});
 }
+function jumpRebirth(value){
+ current=Math.max(1,Math.min(40,+value)); localStorage.rb=current; renderRebirth(); render();
+}
 function reqRows(rb,withActions){
  const r=rows().find(x=>x.rb===rb); if(!r)return "";
  return r.reqs.map(x=>{
@@ -105,6 +112,7 @@ function renderRebirth(){
  document.documentElement.style.setProperty("--accent",COLORS[cycle]);
  $("#cycles").innerHTML=[1,2,3,4,5].map(n=>`<button class="cy ${n===cycle?'on':''}" onclick="setCycle(${n})">${n}</button>`).join("");
  $("#searchCycleLabel").textContent=`Cycle ${cycle}`;
+ $("#rebirthSelect").innerHTML=Array.from({length:40},(_,i)=>`<option value="${i+1}" ${i+1===current?'selected':''}>Rebirth ${i+1}</option>`).join("");
  $("#currentPanel").innerHTML=`<div class="sectionTitle"><span>CURRENT · REBIRTH ${current}</span><span class="mini">Cycle ${cycle}</span></div><div class="mini" style="margin-bottom:8px">What you need now — and what to do afterwards</div>${reqRows(current,true)}`;
  if(current<40){
    $("#nextPanel").style.display="";

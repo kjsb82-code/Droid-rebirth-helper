@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#ff9d00"><link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<title>Droid Rebirth Helper</title>
+<style>
+:root{--accent:#ff9d00;--bg:#070a16;--card:#101526;--muted:#9aa5ba;--line:#222b42;--good:#55e184;--bad:#ff657a}
+*{box-sizing:border-box} body{margin:0;background:radial-gradient(circle at 50% -20%,#1d2744 0,#070a16 45%);color:#fff;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;min-height:100vh}
+.wrap{max-width:720px;margin:auto;padding:18px 16px 70px}.brand{font-weight:1000;font-style:italic;font-size:34px;letter-spacing:-2px;color:var(--accent);margin:4px 0 0}.sub{font-size:12px;letter-spacing:3px;font-weight:800;color:#aeb7c8;margin-bottom:20px}
+.card{background:rgba(16,21,38,.96);border:1px solid var(--line);border-radius:20px;padding:16px;margin:12px 0;box-shadow:0 12px 30px #0005}
+label{display:block;font-size:12px;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.8px;margin-bottom:7px}
+.controls{display:grid;grid-template-columns:1fr 1fr;gap:10px}.field{background:#090d19;border:1px solid #2a334b;color:#fff;border-radius:13px;padding:13px;font-size:16px;width:100%}
+input.field{font-size:18px}.cyclebar{display:flex;gap:7px;margin:14px 0 4px}.cy{flex:1;border:1px solid #30394e;background:#0b1020;color:#fff;border-radius:12px;padding:11px 0;font-weight:900}.cy.on{border-color:var(--accent);color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+.resultHead{display:flex;align-items:center;justify-content:space-between;gap:12px}.droid{font-size:25px;font-weight:950}.pill{border:1px solid var(--accent);color:var(--accent);padding:5px 9px;border-radius:999px;font-size:11px;font-weight:900}
+.verdict{padding:14px;border-radius:15px;font-size:20px;font-weight:1000;margin:12px 0}.keep{background:#3b1520;color:#ff9baa;border:1px solid #762b3e}.sell{background:#123621;color:#76ef9c;border:1px solid #28633e}
+.row{display:grid;grid-template-columns:72px 1fr auto;gap:10px;align-items:center;padding:12px 0;border-top:1px solid var(--line)}.rb{font-weight:900}.tier{font-weight:950}.future{color:var(--muted);font-size:12px}
+.tag{font-size:11px;font-weight:900;padding:5px 8px;border-radius:999px;background:#1d2538}.next{outline:1px solid var(--accent);border-radius:12px;padding-left:8px;padding-right:8px}
+.empty{text-align:center;color:var(--muted);padding:24px 8px}.hint{color:var(--muted);font-size:13px;line-height:1.45}.small{font-size:11px;color:#7f8aa1;margin-top:14px}
+.quickTitle{font-weight:900;margin-bottom:10px}.req{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-top:1px solid var(--line)}.req:first-of-type{border-top:0}
+@media(max-width:420px){.brand{font-size:29px}.controls{grid-template-columns:1fr}.row{grid-template-columns:65px 1fr auto}}
+</style>
+</head>
+<body><div class="wrap">
+<div class="brand">REBIRTH HELPER</div><div class="sub">DROID TYCOON</div>
+
+<div class="card">
+<label>Super Rebirth cycle</label>
+<div class="cyclebar" id="cycles"></div>
+<div class="controls">
+<div><label for="rb">Current rebirth</label><select id="rb" class="field"></select></div>
+<div><label for="owned">Variant you have</label><select id="owned" class="field"></select></div>
+</div>
+<div style="margin-top:12px"><label for="search">Find a droid</label><input id="search" class="field" list="droids" placeholder="e.g. R7, Mecha-Droid, BB9…" autocomplete="off"><datalist id="droids"></datalist></div>
+</div>
+
+<div id="result"></div>
+<div class="card" id="currentCard"></div>
+
+<div class="small">Fan-made helper. Requirement data can change when Droid Tycoon updates. “Keep” means the same droid is required again later in this cycle, so it may be worth retaining/upgrading. Higher variants satisfy lower requirements. Kyber is included because rebirths 36–40 now use it.</div>
+</div>
+<script src="data.js"></script>
+<script>
+const TIER=["DEFAULT","GOLD","DIAMOND","RAINBOW","BESKAR","GALACTIC","STELLAR","KYBER"];
+const COLORS={1:"#ff9d00",2:"#21e3e5",3:"#ff2aa4",4:"#7628ff",5:"#7ee43b"};
+let cycle=+(localStorage.cycle||1), current=+(localStorage.rb||0);
+const $=s=>document.querySelector(s), esc=s=>s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function rows(){return REBIRTH_DATA[cycle]}
+function allNames(){return [...new Set(rows().flatMap(r=>r.reqs.map(x=>x.name)))].sort((a,b)=>a.localeCompare(b))}
+function requirements(name){return rows().flatMap(r=>r.reqs.filter(x=>x.name===name).map(x=>({...x,rb:r.rb})))}
+function init(){
+ document.documentElement.style.setProperty("--accent",COLORS[cycle]);
+ $("#cycles").innerHTML=[1,2,3,4,5].map(n=>`<button class="cy ${n===cycle?'on':''}" onclick="setCycle(${n})">${n}</button>`).join("");
+ $("#rb").innerHTML=Array.from({length:41},(_,i)=>`<option value="${i}" ${i===current?'selected':''}>${i}</option>`).join("");
+ $("#owned").innerHTML=TIER.map(t=>`<option>${t}</option>`).join("");
+ $("#droids").innerHTML=allNames().map(n=>`<option value="${esc(n)}">`).join("");
+ renderCurrent(); render();
+}
+function setCycle(n){cycle=n;localStorage.cycle=n;$("#search").value="";init()}
+$("#rb")?.addEventListener?.("change",()=>{});
+document.addEventListener("change",e=>{if(e.target.id==="rb"){current=+e.target.value;localStorage.rb=current;renderCurrent();render()} if(e.target.id==="owned")render()});
+document.addEventListener("input",e=>{if(e.target.id==="search")render()});
+function renderCurrent(){
+ const next=rows().find(r=>r.rb===current+1);
+ $("#currentCard").innerHTML=next?`<div class="quickTitle">Next rebirth: ${next.rb}</div>${next.reqs.map(x=>`<div class="req"><span>${esc(x.name)}</span><b>${x.tier}</b></div>`).join("")}`:`<div class="quickTitle">Cycle complete</div><div class="hint">You’re at rebirth 40.</div>`;
+}
+function render(){
+ const q=$("#search")?.value.trim().toUpperCase()||"";
+ if(!q){$("#result").innerHTML=`<div class="card empty">Type a droid name and I’ll tell you when you need it, which variant it must be, and when it’s safe to sell.</div>`;return}
+ let names=allNames(), exact=names.find(n=>n.toUpperCase()===q), matches=names.filter(n=>n.toUpperCase().includes(q));
+ if(!exact && matches.length===1) exact=matches[0];
+ if(!exact){$("#result").innerHTML=`<div class="card"><div class="hint">${matches.length?`Matches: <b>${matches.slice(0,8).map(esc).join(", ")}</b>`:"No droid found in this cycle."}</div></div>`;return}
+ const req=requirements(exact), future=req.filter(x=>x.rb>current), next=future[0], last=future[future.length-1];
+ const owned=$("#owned").value, ownedRank=TIER.indexOf(owned);
+ let verdict;
+ if(!future.length) verdict={cls:"sell",text:"✓ SELL",sub:"You don't need this droid again in this cycle."};
+ else verdict={cls:"keep",text:"KEEP",sub:`Needed again at Rebirth ${next.rb} — ${next.tier}. Last needed at Rebirth ${last.rb}.`};
+ const rowsHtml=req.map(x=>{
+   const passed=x.rb<=current, isNext=next&&x.rb===next.rb;
+   const enough=ownedRank>=TIER.indexOf(x.tier);
+   return `<div class="row ${isNext?'next':''}"><div class="rb">RB ${x.rb}</div><div><div class="tier">${x.tier}</div><div class="future">${passed?"passed":isNext?"next requirement":"later this cycle"}</div></div><div class="tag">${passed?"DONE":enough?"HAVE ✓":"UPGRADE"}</div></div>`
+ }).join("");
+ $("#result").innerHTML=`<div class="card"><div class="resultHead"><div class="droid">${esc(exact)}</div><div class="pill">CYCLE ${cycle}</div></div><div class="verdict ${verdict.cls}">${verdict.text}<div style="font-size:12px;font-weight:650;margin-top:4px">${verdict.sub}</div></div>${rowsHtml}</div>`;
+}
+if("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js").catch(()=>{});
+init();
+</script></body></html>

@@ -20,7 +20,7 @@ input.field{font-size:18px}.cyclebar{display:flex;gap:7px;margin:14px 0 4px}.cy{
 .empty{text-align:center;color:var(--muted);padding:24px 8px}.hint{color:var(--muted);font-size:13px;line-height:1.45}.small{font-size:11px;color:#7f8aa1;margin-top:14px}
 .quickTitle{font-weight:900;margin-bottom:10px}.req{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-top:1px solid var(--line)}.req:first-of-type{border-top:0}
 
-.tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0 14px}
+.tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;margin:12px 0 14px}
 .tab{border:1px solid #30394e;background:#0b1020;color:#aeb7c8;border-radius:14px;padding:13px 8px;font-weight:950;letter-spacing:.4px}
 .tab.on{border-color:var(--accent);color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
 .view{display:none}.view.on{display:block}
@@ -35,6 +35,7 @@ input.field{font-size:18px}.cyclebar{display:flex;gap:7px;margin:14px 0 4px}.cy{
 .searchCycle{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
 .searchCycle b{color:var(--accent)}
 
+.tab{font-size:11px;padding:12px 3px}.dexEntry,.fusionRecipe{border-top:1px solid var(--line);padding:12px 0}.dexEntry summary{cursor:pointer;font-weight:850;display:flex;justify-content:space-between}.dexVariants{display:grid;grid-template-columns:repeat(2,1fr);gap:9px;padding-top:12px}.dexVariants label,.ingredient{font-size:13px;display:block;padding:5px 0;color:#d9dfeb}.dexVariants input,.ingredient input{accent-color:var(--accent);width:17px;height:17px;vertical-align:middle}.fusionRecipe .sectionTitle{font-size:16px}.fusionRecipe input{accent-color:var(--accent)}
 @media(max-width:420px){.brand{font-size:29px}.controls{grid-template-columns:1fr}.row{grid-template-columns:65px 1fr auto}}
 </style>
 </head>
@@ -42,7 +43,7 @@ input.field{font-size:18px}.cyclebar{display:flex;gap:7px;margin:14px 0 4px}.cy{
 <div class="brand">REBIRTH HELPER</div><div class="sub">DROID TYCOON</div>
 <div class="tabs">
  <button class="tab on" id="rebirthTab" onclick="showView('rebirth')">REBIRTH</button>
- <button class="tab" id="searchTab" onclick="showView('search')">DROID SEARCH</button>
+ <button class="tab" id="searchTab" onclick="showView('search')">SEARCH</button><button class="tab" id="droidexTab" onclick="showView('droidex')">DROIDEX</button><button class="tab" id="fusionTab" onclick="showView('fusion')">FUSIONS</button>
 </div>
 
 <div id="rebirthView" class="view on">
@@ -62,6 +63,8 @@ input.field{font-size:18px}.cyclebar{display:flex;gap:7px;margin:14px 0 4px}.cy{
  </div>
 </div>
 
+<div id="droidexView" class="view"><div class="card"><div class="sectionTitle">MY DROIDEX</div><p class="hint">Tick every variant you own. Saved on this device.</p><input id="dexSearch" class="field" placeholder="Filter droids…" oninput="renderDex()"><div id="dexStats" class="hint" style="margin:12px 0"></div><div id="dexList"></div></div></div>
+<div id="fusionView" class="view"><div class="card"><div class="sectionTitle">FUSION RECIPES</div><p class="hint">Tick ingredients you have and mark completed fusions. Recipes from your reference image.</p><div id="fusionList"></div></div></div>
 <div id="searchView" class="view">
  <div class="card">
   <div class="searchCycle"><span>Searching <b id="searchCycleLabel">Cycle 1</b></span><button class="navBtn" style="padding:8px 12px" onclick="showView('rebirth')">CHANGE CYCLE</button></div>
@@ -94,7 +97,8 @@ function keepSellFor(name,afterRb){
 function showView(v){
  $("#rebirthView").classList.toggle("on",v==="rebirth"); $("#searchView").classList.toggle("on",v==="search");
  $("#rebirthTab").classList.toggle("on",v==="rebirth"); $("#searchTab").classList.toggle("on",v==="search");
- if(v==="search") setTimeout(()=>$("#search").focus(),80);
+ for(const name of ["droidex","fusion"]){$("#"+name+"View").classList.toggle("on",v===name);$("#"+name+"Tab").classList.toggle("on",v===name)}
+ if(v==="droidex")renderDex(); if(v==="fusion")renderFusions();
 }
 function setCycle(n){cycle=n;localStorage.cycle=n;$("#search").value="";init()}
 function moveRebirth(delta){
@@ -146,68 +150,22 @@ function init(){
  renderRebirth();
  $("#owned").innerHTML=TIER.map(t=>`<option>${t}</option>`).join("");
  $("#droids").innerHTML=allNames().map(n=>`<option value="${esc(n)}">`).join("");
- render();
+ render(); renderDex(); renderFusions();
 }
 document.addEventListener("input",e=>{if(e.target.id==="search")render()});
 document.addEventListener("change",e=>{if(e.target.id==="owned")render()});
 if("serviceWorker" in navigator)navigator.serviceWorker.register("./sw.js").catch(()=>{});
+
+const FUSION_RECIPES=[["Rare", "WHL-EX", "Mouse", "Mouse", "ARG"], ["Rare", "ZRO-TEC", "ID10", "ID10", "2BB"], ["Rare", "BTL-R", "R9", "BDX Explorer", "B1 Battle"], ["Epic", "N-UL", "B1 Heavy", "Gunrunner", "BB"], ["Epic", "SCRP-R", "Gonk", "Groundmech", "R6"], ["Epic", "ARM-CORE", "ARG", "ARG", "B2 Heavy"], ["Epic", "OPT-AR", "R2", "R2", "B2 Super"], ["Legendary", "RO-TOR", "BB9", "Pit", "B1 Battle"], ["Legendary", "FUS-3", "R7", "BU4D", "BU4D"], ["Legendary", "QIK-BIT", "Groundmech", "Groundmech", "BB9"], ["Legendary", "ORB-XL", "CB", "Gunrunner", "B2-RP"], ["Mythic", "RIV-3T", "KX", "IG", "RIC"], ["Mythic", "X-ONK", "KX", "KX", "Gonk"], ["Mythic", "LOW-MO", "A-LT", "A-LT", "Loadlifter"], ["Mythic", "AXL-POD", "RIC", "BDX Explorer", "R7"], ["Mythic", "SRV-0", "RIC-1200", "B1 Heavy", "B1 Heavy"], ["Mythic", "LUG-G", "ID10", "R5", "Loadlifter"]];
+const GONK_COLLECTION=["GONK","EG-5B","EGL","KT","MPH","J09-4MN","PLNK","EGG"];
+const DEX_TIERS=TIER.filter(t=>t!=="KYBER");
+const dexKey=(n,t)=>"dex6:"+n.toUpperCase()+":"+t;
+function dexNames(){return [...new Set(Object.values(REBIRTH_DATA).flatMap(arr=>arr.flatMap(r=>r.reqs.map(x=>x.name))).concat(FUSION_RECIPES.flatMap(r=>r.slice(1)),GONK_COLLECTION))].sort((a,b)=>a.localeCompare(b));}
+function renderDex(){const q=($("#dexSearch").value||"").toUpperCase();const names=dexNames();const count=names.reduce((a,n)=>a+DEX_TIERS.filter(t=>localStorage.getItem(dexKey(n,t))==="1").length,0);$("#dexStats").textContent=`${names.filter(n=>DEX_TIERS.some(t=>localStorage.getItem(dexKey(n,t))==="1")).length} / ${names.length} droids · ${count} / ${names.length*DEX_TIERS.length} variants collected`;
+ $("#dexList").innerHTML=`<div class="card compact" style="margin-bottom:12px"><div class="sectionTitle">GONK COLLECTION</div><div class="hint">${GONK_COLLECTION.filter(n=>DEX_TIERS.some(t=>localStorage.getItem(dexKey(n,t))==="1")).length} / 8 collected · Tick variants below</div></div>`+names.filter(n=>n.toUpperCase().includes(q)).sort((a,b)=>Number(GONK_COLLECTION.includes(b))-Number(GONK_COLLECTION.includes(a))||a.localeCompare(b)).map(n=>`<details class="dexEntry"><summary>${esc(n)} ${GONK_COLLECTION.includes(n)?`<span class="mini" style="color:var(--accent)">GONK</span>`:""} <span class="mini">${DEX_TIERS.filter(t=>localStorage.getItem(dexKey(n,t))==="1").length}/7</span></summary><div class="dexVariants">${DEX_TIERS.map(t=>`<label><input type="checkbox" data-dex="${esc(n)}" data-tier="${t}" ${localStorage.getItem(dexKey(n,t))==="1"?"checked":""}> ${t}</label>`).join("")}</div></details>`).join("");}
+function renderFusions(){let done=FUSION_RECIPES.filter(r=>localStorage.getItem("fusion6:"+r[1])==="1").length;$("#fusionList").innerHTML=`<p class="hint">${done} / ${FUSION_RECIPES.length} completed</p>`+["Rare","Epic","Legendary","Mythic"].map(group=>`<h3 style="color:var(--accent);margin-top:20px">${group.toUpperCase()}</h3>`+FUSION_RECIPES.filter(r=>r[0]===group).map(r=>`<div class="fusionRecipe"><div class="sectionTitle">${esc(r[1])}<label class="mini"><input type="checkbox" data-fusion="${r[1]}" ${localStorage.getItem("fusion6:"+r[1])==="1"?"checked":""}> FUSED</label></div><div class="hint">${r.slice(2).map(esc).join(" + ")} → ${esc(r[1])}</div>${r.slice(2).map((ingredient,i)=>`<label class="ingredient"><input type="checkbox" data-ingredient="${r[1]}:${i}" ${localStorage.getItem("ingredient6:"+r[1]+":"+i)==="1"?"checked":""}> ${esc(ingredient)} ${i>0&&r.slice(2,i+2).filter(x=>x===ingredient).length>1?'(extra copy)':''}</label>`).join("")}</div>`).join("")).join("");}
+document.addEventListener("change",e=>{let x=e.target;if(x.dataset.dex){localStorage.setItem(dexKey(x.dataset.dex,x.dataset.tier),x.checked?"1":"0");renderDex()}if(x.dataset.fusion){localStorage.setItem("fusion6:"+x.dataset.fusion,x.checked?"1":"0");renderFusions()}if(x.dataset.ingredient){localStorage.setItem("ingredient6:"+x.dataset.ingredient,x.checked?"1":"0")}});
+
 init();
 </script>
-<script>
-const TIER=["DEFAULT","GOLD","DIAMOND","RAINBOW","BESKAR","GALACTIC","STELLAR","KYBER"];
-const COLORS={1:"#ff9d00",2:"#21e3e5",3:"#ff2aa4",4:"#7628ff",5:"#7ee43b"};
-let cycle=+(localStorage.cycle||1), current=+(localStorage.rb||0);
-const $=s=>document.querySelector(s), esc=s=>s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-function rows(){return REBIRTH_DATA[cycle]}
-function allNames(){return [...new Set(rows().flatMap(r=>r.reqs.map(x=>x.name)))].sort((a,b)=>a.localeCompare(b))}
-function requirements(name){return rows().flatMap(r=>r.reqs.filter(x=>x.name===name).map(x=>({...x,rb:r.rb})))}
-function init(){
- document.documentElement.style.setProperty("--accent",COLORS[cycle]);
- $("#cycles").innerHTML=[1,2,3,4,5].map(n=>`<button class="cy ${n===cycle?'on':''}" onclick="setCycle(${n})">${n}</button>`).join("");
- $("#rb").innerHTML=Array.from({length:41},(_,i)=>`<option value="${i}" ${i===current?'selected':''}>${i}</option>`).join("");
- $("#owned").innerHTML=TIER.map(t=>`<option>${t}</option>`).join("");
- $("#droids").innerHTML=allNames().map(n=>`<option value="${esc(n)}">`).join("");
- renderCurrent(); render();
-}
-function setCycle(n){cycle=n;localStorage.cycle=n;$("#search").value="";init()}
-$("#rb")?.addEventListener?.("change",()=>{});
-document.addEventListener("change",e=>{if(e.target.id==="rb"){current=+e.target.value;localStorage.rb=current;renderCurrent();render()} if(e.target.id==="owned")render()});
-document.addEventListener("input",e=>{if(e.target.id==="search")render()});
-function keepSellFor(name, afterRb){
- const later=requirements(name).filter(x=>x.rb>afterRb);
- if(!later.length) return {keep:false,label:"SELL",detail:"Not needed again this cycle"};
- const n=later[0];
- return {keep:true,label:"KEEP",detail:`Next: RB ${n.rb} · ${n.tier}`};
-}
-function renderCurrent(){
- const here=rows().find(r=>r.rb===current);
- if(current===0){
-   const first=rows()[0];
-   $("#currentCard").innerHTML=`<div class="quickTitle">Cycle ${cycle} · Before Rebirth 1</div><div class="hint" style="margin-bottom:10px">Your first requirements:</div>`+
-   first.reqs.map(x=>`<div class="req"><span><b>${esc(x.name)}</b><br><span class="future">${x.tier}</span></span><span class="tag">RB 1</span></div>`).join("");
-   return;
- }
- $("#currentCard").innerHTML=`<div class="quickTitle">Cycle ${cycle} · Rebirth ${current}</div><div class="hint" style="margin-bottom:8px">Droids required for this rebirth — and what to do with them afterwards.</div>`+
- here.reqs.map(x=>{const s=keepSellFor(x.name,current);return `<div class="req" style="align-items:center"><span><b>${esc(x.name)}</b><br><span class="future">${x.tier}</span></span><span style="text-align:right"><b style="color:${s.keep?'var(--bad)':'var(--good)'}">${s.label}</b><br><span class="future">${s.detail}</span></span></div>`}).join("");
-}
-function render(){
- const q=$("#search")?.value.trim().toUpperCase()||"";
- if(!q){$("#result").innerHTML=`<div class="card empty">Type a droid name and I’ll tell you when you need it, which variant it must be, and when it’s safe to sell.</div>`;return}
- let names=allNames(), exact=names.find(n=>n.toUpperCase()===q), matches=names.filter(n=>n.toUpperCase().includes(q));
- if(!exact && matches.length===1) exact=matches[0];
- if(!exact){$("#result").innerHTML=`<div class="card"><div class="hint">${matches.length?`Matches: <b>${matches.slice(0,8).map(esc).join(", ")}</b>`:"No droid found in this cycle."}</div></div>`;return}
- const req=requirements(exact), future=req.filter(x=>x.rb>current), next=future[0], last=future[future.length-1];
- const owned=$("#owned").value, ownedRank=TIER.indexOf(owned);
- let verdict;
- if(!future.length) verdict={cls:"sell",text:"✓ SELL",sub:"You don't need this droid again in this cycle."};
- else verdict={cls:"keep",text:"KEEP",sub:`Needed again at Rebirth ${next.rb} — ${next.tier}. Last needed at Rebirth ${last.rb}.`};
- const rowsHtml=req.map(x=>{
-   const passed=x.rb<=current, isNext=next&&x.rb===next.rb;
-   const enough=ownedRank>=TIER.indexOf(x.tier);
-   return `<div class="row ${isNext?'next':''}"><div class="rb">RB ${x.rb}</div><div><div class="tier">${x.tier}</div><div class="future">${passed?"passed":isNext?"next requirement":"later this cycle"}</div></div><div class="tag">${passed?"DONE":enough?"HAVE ✓":"UPGRADE"}</div></div>`
- }).join("");
- $("#result").innerHTML=`<div class="card"><div class="resultHead"><div class="droid">${esc(exact)}</div><div class="pill">CYCLE ${cycle}</div></div><div class="verdict ${verdict.cls}">${verdict.text}<div style="font-size:12px;font-weight:650;margin-top:4px">${verdict.sub}</div></div>${rowsHtml}</div>`;
-}
-if("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js").catch(()=>{});
-init();
-</script></body></html>
+</body></html>
